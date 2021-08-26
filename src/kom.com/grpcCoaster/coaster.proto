@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package coaster;
+option go_package = "kom.com/m/v2/src/kom.com/grpcCoaster";
+
+message CoasterMessage {
+    string name = 1;
+    string manufacture = 2;
+    string id = 3;
+    uint32 height = 4;
+}
+
+message CoastersMessage {
+    repeated CoasterMessage coasters = 1;
+}
+
+
+message CoasterIDMessage {
+    string id = 1;
+}
+
+message Empty {}
+
+service CoasterService {
+    rpc getCoasters(Empty) returns (CoastersMessage) {}
+	rpc getCoaster(CoasterIDMessage) returns (CoasterMessage) {}
+	rpc createCoaster(CoasterMessage) returns (Empty) {}
+}

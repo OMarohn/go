@@ -1,0 +1,28 @@
+GET http://localhost:8080/redis
+
+####
+GET http://localhost:8080/redis/id88
+
+###
+POST http://localhost:8080/redis
+
+  {
+    "name": "Coaster 3",
+    "manufacture": "Manufacture 3",
+    "id": "id3",
+    "height": 300
+  }
+
+###
+GET http://localhost:8080/coasters
+
+
+###
+POST http://localhost:8080/coasters
+
+  {
+    "name": "Coaster 7",
+    "manufacture": "Manufacture 5",
+    "id": "id5",
+    "height": 323
+  }
