@@ -1,15 +1,13 @@
+// Das ist eine REST Implementierung ohne weitere Frameworks
+
 package coaster
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
 )
-
-// Das scheint mir irgendwie unschön!
-var ctx = context.Background()
 
 // Der Port als REST Implementierung
 type CoasterRestPort struct {

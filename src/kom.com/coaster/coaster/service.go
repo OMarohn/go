@@ -20,3 +20,7 @@ func (cs CoasterService) getCoaster(id string) (Coaster, error) {
 func (cs CoasterService) createCoaster(coaster Coaster) error {
 	return cs.repo.createCoaster(coaster)
 }
+
+func (cs CoasterService) deleteCoaster(id string) error {
+	return cs.repo.deleteCoaster(id)
+}

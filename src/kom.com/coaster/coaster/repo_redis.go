@@ -1,6 +1,7 @@
 package coaster
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 
@@ -11,6 +12,8 @@ import (
 type CoasterRedisRepo struct {
 	rclient *redis.Client
 }
+
+var ctx = context.Background()
 
 func NewRedisRepo(redisClient *redis.Client) CoasterRedisRepo {
 	return CoasterRedisRepo{rclient: redisClient}
@@ -80,5 +83,17 @@ func (repo CoasterRedisRepo) getCoaster(id string) (Coaster, error) {
 		return coasterItem, err
 	} else {
 		return Coaster{}, errors.New("nicht gefunden")
+	}
+}
+
+// Ein Datensatz löschen
+func (repo CoasterRedisRepo) deleteCoaster(id string) error {
+
+	cnt, err := repo.rclient.Del(ctx, "coaster."+id).Result()
+
+	if err == nil && cnt == 1 {
+		return nil
+	} else {
+		return errors.New("nicht gefunden")
 	}
 }

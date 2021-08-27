@@ -59,8 +59,8 @@ func main() {
 
 	// Handler
 	http.HandleFunc("/coasters", port_mem.Handle)
-	http.HandleFunc("/redis", port.Handle)
-	http.HandleFunc("/redis/", port.HandleGet)
+	http.HandleFunc("/redis/coasters", port.Handle)
+	http.HandleFunc("/redis/coasters/", port.HandleGet)
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		panic(err)

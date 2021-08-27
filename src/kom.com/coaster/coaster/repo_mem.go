@@ -48,5 +48,14 @@ func (repo CoasterMemmoryRepo) createCoaster(coaster Coaster) error {
 }
 
 func (repo CoasterMemmoryRepo) getCoaster(id string) (Coaster, error) {
+	c, ok := repo.store[id]
+	if ok {
+		return c, nil
+	}
+
 	return Coaster{}, errors.New("nicht implementiert")
+}
+
+func (repo CoasterMemmoryRepo) deleteCoaster(id string) error {
+	return errors.New("nicht implementiert")
 }

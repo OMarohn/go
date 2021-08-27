@@ -1,17 +1,21 @@
-GET http://localhost:8080/redis
+GET http://localhost:8080/redis/coasters
 
 ####
-GET http://localhost:8080/redis/id88
+GET http://localhost:8080/redis/coasters/id88
 
 ###
-POST http://localhost:8080/redis
+POST http://localhost:8080/redis/coasters
 
-  {
-    "name": "Coaster 3",
-    "manufacture": "Manufacture 3",
-    "id": "id3",
-    "height": 300
-  }
+{
+  "name": "Coaster 5",
+  "manufacture": "Manufacture 5",
+  "id": "id5",
+  "height": 500
+}
+
+###
+DELETE http://localhost:8080/redis/coasters/id5
+
 
 ###
 GET http://localhost:8080/coasters
@@ -20,9 +24,12 @@ GET http://localhost:8080/coasters
 ###
 POST http://localhost:8080/coasters
 
-  {
-    "name": "Coaster 7",
-    "manufacture": "Manufacture 5",
-    "id": "id5",
-    "height": 323
-  }
+{
+  "name": "Coaster 7",
+  "manufacture": "Manufacture 5",
+  "id": "id5",
+  "height": 323
+}
+
+###
+GET http://localhost:8080/coasters/id1
