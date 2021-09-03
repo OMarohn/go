@@ -26,6 +26,7 @@ func (port CoasterRestPort2) HandleList(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	w.Header().Add("content-type", "application/json")
+
 	w.WriteHeader(http.StatusOK)
 	w.Write(result)
 }

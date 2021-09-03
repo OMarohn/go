@@ -75,7 +75,6 @@ func main() {
 	r.HandleFunc("/coasters", port_REST_mem.HandleCreate).Methods(http.MethodPost)
 
 	sr := r.PathPrefix("/redis").Subrouter()
-	sr.Use(loggingMiddleware)
 	sr.HandleFunc("/coasters", port_REST_redis.HandleList).Methods(http.MethodGet)
 	sr.HandleFunc("/coasters/{id}", port_REST_redis.HandleGetOne).Methods(http.MethodGet)
 	sr.HandleFunc("/coasters/{id}", port_REST_redis.HandleDelete).Methods(http.MethodDelete)
