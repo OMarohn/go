@@ -2,3 +2,4 @@
 bin/**
 vendor/**
 pkg
+__debug_bin.exe

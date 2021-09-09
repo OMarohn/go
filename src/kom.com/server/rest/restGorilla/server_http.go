@@ -2,6 +2,7 @@
 package main
 
 import (
+	"crypto/rsa"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -51,10 +52,6 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Do stuff here
 		log.Println(r.RequestURI)
-		token, found := r.Header["Authorization"]
-		if found {
-			log.Println(token)
-		}
 		// Call the next handler, which can be another middleware in the chain, or the final handler.
 		next.ServeHTTP(w, r)
 	})
@@ -74,7 +71,7 @@ type JSONWebKeys struct {
 	X5c []string `json:"x5c"`
 }
 
-func getJWKS(url string, certStore map[string]string) (int, error) {
+func getJWKS(url string, certStore map[string]*rsa.PublicKey) (int, error) {
 	cert := ""
 	resp, err := http.Get(url)
 
@@ -92,26 +89,30 @@ func getJWKS(url string, certStore map[string]string) (int, error) {
 
 	for k, _ := range jwks.Keys {
 		cert = "-----BEGIN CERTIFICATE-----\n" + jwks.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
-		certStore[jwks.Keys[k].Kid] = cert
+		pubKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(cert))
+		if err != nil {
+			log.Println("Public Key nicht gefunden")
+		}
+		certStore[jwks.Keys[k].Kid] = pubKey
 	}
 
 	return len(certStore), nil
 }
 
-func getPemCert(token *jwt.Token, certStore map[string]string) (string, error) {
+func getPemCert(token *jwt.Token, certStore map[string]*rsa.PublicKey) (*rsa.PublicKey, error) {
 
 	kid := fmt.Sprintf("%v", token.Header["kid"])
-	cert, found := certStore[kid]
+	pk, found := certStore[kid]
 	if !found {
 		err := errors.New("konnte key für das zertifikat nicht finden")
-		return "", err
+		return nil, err
 	}
 
-	return cert, nil
+	return pk, nil
 }
 
 func main() {
-	certStore := map[string]string{}
+	certStore := map[string]*rsa.PublicKey{}
 	// JWT Certifikate preloaden
 	cnt, err := getJWKS("https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json", certStore)
 	if err != nil {
@@ -156,17 +157,14 @@ func main() {
 			**/
 
 			// das mit dem CertStore ist noch ein wenig unschön!
-			cert, err := getPemCert(token, certStore)
+			pk, err := getPemCert(token, certStore)
 			if err != nil {
 				panic(err.Error())
 			}
 
-			result, _ := jwt.ParseRSAPublicKeyFromPEM([]byte(cert))
-
-			return result, err
+			return pk, err
 		},
 		SigningMethod: jwt.SigningMethodRS256,
-		Debug:         true,
 	})
 
 	r := mux.NewRouter()
