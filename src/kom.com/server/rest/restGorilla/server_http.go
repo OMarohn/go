@@ -74,12 +74,12 @@ type JSONWebKeys struct {
 	X5c []string `json:"x5c"`
 }
 
-func getPemCert(token *jwt.Token) (string, error) {
+func getJWKS(url string, certStore map[string]string) (int, error) {
 	cert := ""
-	resp, err := http.Get("https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json")
+	resp, err := http.Get(url)
 
 	if err != nil {
-		return cert, err
+		return 0, err
 	}
 	defer resp.Body.Close()
 
@@ -87,24 +87,38 @@ func getPemCert(token *jwt.Token) (string, error) {
 	err = json.NewDecoder(resp.Body).Decode(&jwks)
 
 	if err != nil {
-		return cert, err
+		return 0, err
 	}
 
 	for k, _ := range jwks.Keys {
-		if token.Header["kid"] == jwks.Keys[k].Kid {
-			cert = "-----BEGIN CERTIFICATE-----\n" + jwks.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
-		}
+		cert = "-----BEGIN CERTIFICATE-----\n" + jwks.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
+		certStore[jwks.Keys[k].Kid] = cert
 	}
 
-	if cert == "" {
-		err := errors.New("Unable to find appropriate key.")
-		return cert, err
+	return len(certStore), nil
+}
+
+func getPemCert(token *jwt.Token, certStore map[string]string) (string, error) {
+
+	kid := fmt.Sprintf("%v", token.Header["kid"])
+	cert, found := certStore[kid]
+	if !found {
+		err := errors.New("konnte key für das zertifikat nicht finden")
+		return "", err
 	}
 
 	return cert, nil
 }
 
 func main() {
+	certStore := map[string]string{}
+	// JWT Certifikate preloaden
+	cnt, err := getJWKS("https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json", certStore)
+	if err != nil {
+		log.Println("Keine Zerifikate im Store gefunden!")
+	}
+	log.Println("Anzahl Zerifikate: ", cnt)
+
 	conn, err := RedisClient()
 	defer conn.closeRedis()
 
@@ -141,7 +155,8 @@ func main() {
 			}
 			**/
 
-			cert, err := getPemCert(token)
+			// das mit dem CertStore ist noch ein wenig unschön!
+			cert, err := getPemCert(token, certStore)
 			if err != nil {
 				panic(err.Error())
 			}
@@ -150,9 +165,6 @@ func main() {
 
 			return result, err
 		},
-		// When set, the middleware verifies that tokens are signed with the specific signing algorithm
-		// If the signing method is not constant the ValidationKeyGetter callback can be used to implement additional checks
-		// Important to avoid security issues described here: https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
 		SigningMethod: jwt.SigningMethodRS256,
 		Debug:         true,
 	})
