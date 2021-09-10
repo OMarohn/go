@@ -72,7 +72,6 @@ type JSONWebKeys struct {
 }
 
 func getJWKS(url string, certStore map[string]*rsa.PublicKey) (int, error) {
-	cert := ""
 	resp, err := http.Get(url)
 
 	if err != nil {
@@ -87,13 +86,18 @@ func getJWKS(url string, certStore map[string]*rsa.PublicKey) (int, error) {
 		return 0, err
 	}
 
-	for k, _ := range jwks.Keys {
-		cert = "-----BEGIN CERTIFICATE-----\n" + jwks.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
+	return mapJwks2Store(jwks, certStore)
+
+}
+
+func mapJwks2Store(items Jwks, certStore map[string]*rsa.PublicKey) (int, error) {
+	for k, _ := range items.Keys {
+		cert := "-----BEGIN CERTIFICATE-----\n" + items.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
 		pubKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(cert))
 		if err != nil {
 			log.Println("Public Key nicht gefunden")
 		}
-		certStore[jwks.Keys[k].Kid] = pubKey
+		certStore[items.Keys[k].Kid] = pubKey
 	}
 
 	return len(certStore), nil
@@ -116,7 +120,22 @@ func main() {
 	// JWT Certifikate preloaden
 	cnt, err := getJWKS("https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json", certStore)
 	if err != nil {
-		log.Println("Keine Zerifikate im Store gefunden!")
+		log.Println("Keine Zerifikate im Store gefunden!", err)
+		jsonFile, err := os.Open("./jwks.json")
+
+		if err != nil {
+			log.Println("Auch keine JWKS-Datei gefunden!")
+		} else {
+			defer jsonFile.Close()
+			log.Println("File OK")
+			var jwks = Jwks{}
+			err = json.NewDecoder(jsonFile).Decode(&jwks)
+			if err != nil {
+				log.Println("Fehler beim Parsen", err)
+			} else {
+				cnt, _ = mapJwks2Store(jwks, certStore)
+			}
+		}
 	}
 	log.Println("Anzahl Zerifikate: ", cnt)
 
@@ -140,6 +159,7 @@ func main() {
 	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
 
+			log.Printf("Token: %v", token)
 			/**
 			// Verify 'aud' claim
 			aud := "YOUR_API_IDENTIFIER"
