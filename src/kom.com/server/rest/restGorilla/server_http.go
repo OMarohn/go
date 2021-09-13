@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"encoding/json"
 
@@ -159,6 +160,9 @@ func main() {
 	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
 
+			mapClaims := token.Claims.(jwt.MapClaims)
+			delete(mapClaims, "iat")
+
 			log.Printf("Token: %v", token)
 			/**
 			// Verify 'aud' claim
@@ -175,6 +179,12 @@ func main() {
 				return token, errors.New("Invalid issuer.")
 			}
 			**/
+
+			//exp:1.631349716e+09
+			checkValid := token.Claims.(jwt.MapClaims).VerifyExpiresAt(time.Now().Unix(), true)
+			if !checkValid {
+				panic(errors.New("token outdated"))
+			}
 
 			// das mit dem CertStore ist noch ein wenig unschön!
 			pk, err := getPemCert(token, certStore)
