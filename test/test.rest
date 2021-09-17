@@ -47,14 +47,3 @@ Authorization: Bearer {{token}}
 ###
 GET http://localhost:8080/redis/extern
 Authorization: Bearer {{token}}
-
-
-####
-POST  https://dev-vdt9zz3q.us.auth0.com/oauth/token
-Accept: application/json
-Content-Type: application/json
-
-{"client_id":"GQ4JBVXRjlFKxRQ4ux4O3VSeaHXAoTrb","client_secret":"AwJzq6guQBW4njRKOII8zxD-ako9yTR50NfAiHpj4tcL8ude_d-NDuqIMBuQf5b7","audience":"demoapi.rebelofbavaria.de","grant_type":"client_credentials"}
-
-#####
-// https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json
