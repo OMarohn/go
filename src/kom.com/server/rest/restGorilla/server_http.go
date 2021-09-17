@@ -49,17 +49,17 @@ func (d *Connections) closeRedis() error {
 	return nil
 }
 
+// Einfache Middelware
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Do stuff here
-		log.Println(r.RequestURI)
-		// Call the next handler, which can be another middleware in the chain, or the final handler.
+		log.Println(r.Method)
 		next.ServeHTTP(w, r)
 	})
 }
 
 /// JWT Stuff
 
+// Struktur des JWKS
 type Jwks struct {
 	Keys []JSONWebKeys `json:"keys"`
 }
@@ -72,6 +72,7 @@ type JSONWebKeys struct {
 	X5c []string `json:"x5c"`
 }
 
+// Remote lesen des JWKS
 func getJWKS(url string, certStore map[string]*rsa.PublicKey) (int, error) {
 	resp, err := http.Get(url)
 
@@ -88,9 +89,9 @@ func getJWKS(url string, certStore map[string]*rsa.PublicKey) (int, error) {
 	}
 
 	return mapJwks2Store(jwks, certStore)
-
 }
 
+// JWKS Ergbniss in eine Map id|rsaPublic Key wandeln
 func mapJwks2Store(items Jwks, certStore map[string]*rsa.PublicKey) (int, error) {
 	for k, _ := range items.Keys {
 		cert := "-----BEGIN CERTIFICATE-----\n" + items.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
@@ -104,6 +105,7 @@ func mapJwks2Store(items Jwks, certStore map[string]*rsa.PublicKey) (int, error)
 	return len(certStore), nil
 }
 
+// Public Key ermitteln
 func getPemCert(token *jwt.Token, certStore map[string]*rsa.PublicKey) (*rsa.PublicKey, error) {
 
 	kid := fmt.Sprintf("%v", token.Header["kid"])
@@ -118,21 +120,22 @@ func getPemCert(token *jwt.Token, certStore map[string]*rsa.PublicKey) (*rsa.Pub
 
 func main() {
 	certStore := map[string]*rsa.PublicKey{}
-	// JWT Certifikate preloaden
+	// JWT Certifikate preloaden -- hier hab ich noch nen Problem im ISTIO-EGress!
 	cnt, err := getJWKS("https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json", certStore)
 	if err != nil {
 		log.Println("Keine Zerifikate im Store gefunden!", err)
+		// Datei mit JWKS lesen
 		jsonFile, err := os.Open("./jwks.json")
 
 		if err != nil {
-			log.Println("Auch keine JWKS-Datei gefunden!")
+			panic("Auch keine JWKS-Datei gefunden!")
 		} else {
 			defer jsonFile.Close()
 			log.Println("File OK")
 			var jwks = Jwks{}
 			err = json.NewDecoder(jsonFile).Decode(&jwks)
 			if err != nil {
-				log.Println("Fehler beim Parsen", err)
+				panic(err)
 			} else {
 				cnt, _ = mapJwks2Store(jwks, certStore)
 			}
@@ -157,39 +160,24 @@ func main() {
 		coaster.NewCoasterService(
 			coaster.NewCoasterMemmoryRepo()))
 
+	// JWT checken
 	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
 
 			mapClaims := token.Claims.(jwt.MapClaims)
+			// Uhr läuft auseinander, deshalb kein Check aus den Ausstellungszeitpunkt
 			delete(mapClaims, "iat")
 
-			log.Printf("Token: %v", token)
-			/**
-			// Verify 'aud' claim
-			aud := "YOUR_API_IDENTIFIER"
-			checkAud := token.Claims.(jwt.MapClaims).VerifyAudience(aud, false)
-			if !checkAud {
-				return token, errors.New("Invalid audience.")
-			}
-
-			// Verify 'iss' claim
-			iss := "https://YOUR_DOMAIN/"
-			checkIss := token.Claims.(jwt.MapClaims).VerifyIssuer(iss, false)
-			if !checkIss {
-				return token, errors.New("Invalid issuer.")
-			}
-			**/
-
-			//exp:1.631349716e+09
+			// Token sollte noch nicht abgelaufen sein
 			checkValid := token.Claims.(jwt.MapClaims).VerifyExpiresAt(time.Now().Unix(), true)
 			if !checkValid {
-				panic(errors.New("token outdated"))
+				return nil, errors.New("token outdated")
 			}
 
 			// das mit dem CertStore ist noch ein wenig unschön!
 			pk, err := getPemCert(token, certStore)
 			if err != nil {
-				panic(err.Error())
+				return nil, errors.New("token invalid")
 			}
 
 			return pk, err
@@ -205,7 +193,7 @@ func main() {
 	r.HandleFunc("/coasters", port_REST_mem.HandleCreate).Methods(http.MethodPost)
 
 	sr := r.PathPrefix("/redis").Subrouter()
-	// sr.Use(loggingMiddleware)
+	sr.Use(loggingMiddleware)
 	sr.HandleFunc("/coasters", port_REST_redis.HandleList).Methods(http.MethodGet)
 	sr.HandleFunc("/coasters/{id}", port_REST_redis.HandleGetOne).Methods(http.MethodGet)
 	sr.HandleFunc("/coasters/{id}", port_REST_redis.HandleDelete).Methods(http.MethodDelete)
