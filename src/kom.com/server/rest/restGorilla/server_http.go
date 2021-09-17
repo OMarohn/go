@@ -186,7 +186,6 @@ func main() {
 	})
 
 	r := mux.NewRouter()
-	r.Use(jwtMiddleware.Handler)
 
 	r.HandleFunc("/coasters", port_REST_mem.HandleList).Methods(http.MethodGet)
 	r.HandleFunc("/coasters/{id}", port_REST_mem.HandleGetOne).Methods(http.MethodGet)
@@ -194,6 +193,7 @@ func main() {
 
 	sr := r.PathPrefix("/redis").Subrouter()
 	sr.Use(loggingMiddleware)
+	sr.Use(jwtMiddleware.Handler)
 	sr.HandleFunc("/coasters", port_REST_redis.HandleList).Methods(http.MethodGet)
 	sr.HandleFunc("/coasters/{id}", port_REST_redis.HandleGetOne).Methods(http.MethodGet)
 	sr.HandleFunc("/coasters/{id}", port_REST_redis.HandleDelete).Methods(http.MethodDelete)

@@ -7,6 +7,7 @@ Authorization: Bearer {{token}}
 
 ####
 GET http://localhost:8080/redis/coasters/id1
+Authorization: Bearer {{token}}
 
 ###
 POST http://localhost:8080/redis/coasters
@@ -20,18 +21,20 @@ Authorization: Bearer {{token}}
 }
 
 ###
+GET http://localhost:8080/redis/extern
+Authorization: Bearer {{token}}
+
+
+
+###
 DELETE http://localhost:8080/redis/coasters/id1
 
 
 ###
 GET http://localhost:8080/coasters
-Authorization: Bearer {{token}}
-
-
 
 ###
 POST http://localhost:8080/coasters
-Authorization: Bearer {{token}}
 
 {
   "name": "Coaster 7",
@@ -42,8 +45,4 @@ Authorization: Bearer {{token}}
 
 ###
 GET http://localhost:8080/coasters/id1
-Authorization: Bearer {{token}}
 
-###
-GET http://localhost:8080/redis/extern
-Authorization: Bearer {{token}}
