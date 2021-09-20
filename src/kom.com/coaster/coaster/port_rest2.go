@@ -73,7 +73,7 @@ func (port CoasterRestPort2) HandleGetOne(w http.ResponseWriter, r *http.Request
 func (port CoasterRestPort2) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	theVars := mux.Vars(r)
 	id := theVars["id"]
-	log.Printf("parameter:= %v", id)
+	log.Printf("request:= %v", r)
 
 	err := port.service.deleteCoaster(id)
 

@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"encoding/json"
@@ -118,6 +119,22 @@ func getPemCert(token *jwt.Token, certStore map[string]*rsa.PublicKey) (*rsa.Pub
 	return pk, nil
 }
 
+func checkScope(claims jwt.MapClaims, scope string) bool {
+	ret := false
+
+	scopes := fmt.Sprintf("%v", claims["scope"])
+	log.Println(scopes)
+	result := strings.Split(scopes, " ")
+	for i := range result {
+		if result[i] == scope {
+			ret = true
+			break
+		}
+	}
+
+	return ret
+}
+
 func main() {
 	certStore := map[string]*rsa.PublicKey{}
 	// JWT Certifikate preloaden -- hier hab ich noch nen Problem im ISTIO-EGress!
@@ -161,7 +178,7 @@ func main() {
 			coaster.NewCoasterMemmoryRepo()))
 
 	// JWT checken
-	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Options{
+	jwtMiddlewareRO := jwtmiddleware.New(jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
 
 			mapClaims := token.Claims.(jwt.MapClaims)
@@ -169,9 +186,41 @@ func main() {
 			delete(mapClaims, "iat")
 
 			// Token sollte noch nicht abgelaufen sein
-			checkValid := token.Claims.(jwt.MapClaims).VerifyExpiresAt(time.Now().Unix(), true)
+			checkValid := mapClaims.VerifyExpiresAt(time.Now().Unix(), true)
 			if !checkValid {
 				return nil, errors.New("token outdated")
+			}
+
+			if !checkScope(mapClaims, "read:sample") {
+				return nil, errors.New("scope not supported")
+			}
+
+			// das mit dem CertStore ist noch ein wenig unschön!
+			pk, err := getPemCert(token, certStore)
+			if err != nil {
+				return nil, errors.New("token invalid")
+			}
+
+			return pk, err
+		},
+		SigningMethod: jwt.SigningMethodRS256,
+	})
+
+	jwtMiddlewareRW := jwtmiddleware.New(jwtmiddleware.Options{
+		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+
+			mapClaims := token.Claims.(jwt.MapClaims)
+			// Uhr läuft auseinander, deshalb kein Check aus den Ausstellungszeitpunkt
+			delete(mapClaims, "iat")
+
+			// Token sollte noch nicht abgelaufen sein
+			checkValid := mapClaims.VerifyExpiresAt(time.Now().Unix(), true)
+			if !checkValid {
+				return nil, errors.New("token outdated")
+			}
+
+			if !checkScope(mapClaims, "write:sample") {
+				return nil, errors.New("scope not supported")
 			}
 
 			// das mit dem CertStore ist noch ein wenig unschön!
@@ -192,14 +241,19 @@ func main() {
 	r.HandleFunc("/coasters", port_REST_mem.HandleCreate).Methods(http.MethodPost)
 
 	sr := r.PathPrefix("/redis").Subrouter()
-	sr.Use(loggingMiddleware)
-	sr.Use(jwtMiddleware.Handler)
-	sr.HandleFunc("/coasters", port_REST_redis.HandleList).Methods(http.MethodGet)
-	sr.HandleFunc("/coasters/{id}", port_REST_redis.HandleGetOne).Methods(http.MethodGet)
-	sr.HandleFunc("/coasters/{id}", port_REST_redis.HandleDelete).Methods(http.MethodDelete)
-	sr.HandleFunc("/coasters", port_REST_redis.HandleCreate).Methods(http.MethodPost)
+	srg := sr.Methods(http.MethodGet).Subrouter()
+	srg.Use(jwtMiddlewareRO.Handler)
 
-	sr.HandleFunc("/extern", func(w http.ResponseWriter, r *http.Request) {
+	srp := sr.Methods(http.MethodPost).Subrouter()
+	srp.Use(jwtMiddlewareRW.Handler)
+
+	sr.HandleFunc("/coasters/{id}", port_REST_redis.HandleDelete).Methods(http.MethodDelete)
+
+	srg.HandleFunc("/coasters", port_REST_redis.HandleList)
+	srg.HandleFunc("/coasters/{id}", port_REST_redis.HandleGetOne)
+	srp.HandleFunc("/coasters", port_REST_redis.HandleCreate)
+
+	srg.HandleFunc("/extern", func(w http.ResponseWriter, r *http.Request) {
 		resp, err := http.Get("https://jsonplaceholder.typicode.com/posts/1")
 
 		if err != nil {
@@ -217,7 +271,7 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write(body)
 
-	}).Methods(http.MethodGet)
+	})
 
 	err = http.ListenAndServe(":8080", r)
 	if err != nil {
