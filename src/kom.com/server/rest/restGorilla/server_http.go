@@ -73,52 +73,6 @@ type JSONWebKeys struct {
 	X5c []string `json:"x5c"`
 }
 
-// Remote lesen des JWKS
-func getJWKS(url string, certStore map[string]*rsa.PublicKey) (int, error) {
-	resp, err := http.Get(url)
-
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	var jwks = Jwks{}
-	err = json.NewDecoder(resp.Body).Decode(&jwks)
-
-	if err != nil {
-		return 0, err
-	}
-
-	return mapJwks2Store(jwks, certStore)
-}
-
-// JWKS Ergbniss in eine Map id|rsaPublic Key wandeln
-func mapJwks2Store(items Jwks, certStore map[string]*rsa.PublicKey) (int, error) {
-	for k, _ := range items.Keys {
-		cert := "-----BEGIN CERTIFICATE-----\n" + items.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
-		pubKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(cert))
-		if err != nil {
-			log.Println("Public Key nicht gefunden")
-		}
-		certStore[items.Keys[k].Kid] = pubKey
-	}
-
-	return len(certStore), nil
-}
-
-// Public Key ermitteln
-func getPemCert(token *jwt.Token, certStore map[string]*rsa.PublicKey) (*rsa.PublicKey, error) {
-
-	kid := fmt.Sprintf("%v", token.Header["kid"])
-	pk, found := certStore[kid]
-	if !found {
-		err := errors.New("konnte key für das zertifikat nicht finden")
-		return nil, err
-	}
-
-	return pk, nil
-}
-
 func checkScope(claims jwt.MapClaims, scope string) bool {
 	ret := false
 
@@ -135,10 +89,60 @@ func checkScope(claims jwt.MapClaims, scope string) bool {
 	return ret
 }
 
-func main() {
-	certStore := map[string]*rsa.PublicKey{}
-	// JWT Certifikate preloaden -- hier hab ich noch nen Problem im ISTIO-EGress!
-	cnt, err := getJWKS("https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json", certStore)
+type JWKManager struct {
+	url       string
+	certStore map[string]*rsa.PublicKey
+}
+
+// JWKS Ergbniss in eine Map id|rsaPublic Key wandeln
+func (jwkm *JWKManager) mapJwks2Store(items Jwks) (int, error) {
+	jwkm.certStore = make(map[string]*rsa.PublicKey)
+	for k, _ := range items.Keys {
+		cert := "-----BEGIN CERTIFICATE-----\n" + items.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
+		pubKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(cert))
+		if err != nil {
+			log.Println("Public Key nicht gefunden")
+		}
+		jwkm.certStore[items.Keys[k].Kid] = pubKey
+	}
+
+	return len(jwkm.certStore), nil
+}
+
+// Remote lesen des JWKS
+func (jwkm *JWKManager) getJWKS(url string) (int, error) {
+	resp, err := http.Get(url)
+
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	var jwks = Jwks{}
+	err = json.NewDecoder(resp.Body).Decode(&jwks)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return jwkm.mapJwks2Store(jwks)
+}
+
+// Public Key ermitteln
+func (jwkm *JWKManager) getPemCert(token *jwt.Token) (*rsa.PublicKey, error) {
+
+	kid := fmt.Sprintf("%v", token.Header["kid"])
+	pk, found := jwkm.certStore[kid]
+	if !found {
+		err := errors.New("konnte key für das zertifikat nicht finden")
+		return nil, err
+	}
+
+	return pk, nil
+}
+
+func (jwkm *JWKManager) initCertStore() {
+	cnt, err := jwkm.getJWKS(jwkm.url)
 	if err != nil {
 		log.Println("Keine Zerifikate im Store gefunden!", err)
 		// Datei mit JWKS lesen
@@ -154,11 +158,16 @@ func main() {
 			if err != nil {
 				panic(err)
 			} else {
-				cnt, _ = mapJwks2Store(jwks, certStore)
+				cnt, _ = jwkm.mapJwks2Store(jwks)
 			}
 		}
 	}
 	log.Println("Anzahl Zerifikate: ", cnt)
+}
+
+func main() {
+	jwkManager := JWKManager{url: "https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json"}
+	jwkManager.initCertStore()
 
 	conn, err := RedisClient()
 	defer conn.closeRedis()
@@ -196,7 +205,7 @@ func main() {
 			}
 
 			// das mit dem CertStore ist noch ein wenig unschön!
-			pk, err := getPemCert(token, certStore)
+			pk, err := jwkManager.getPemCert(token)
 			if err != nil {
 				return nil, errors.New("token invalid")
 			}
@@ -224,7 +233,7 @@ func main() {
 			}
 
 			// das mit dem CertStore ist noch ein wenig unschön!
-			pk, err := getPemCert(token, certStore)
+			pk, err := jwkManager.getPemCert(token)
 			if err != nil {
 				return nil, errors.New("token invalid")
 			}
