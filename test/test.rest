@@ -45,3 +45,5 @@ POST http://localhost:8080/coasters
 ###
 GET http://localhost:8080/coasters/id1
 
+###
+GET http://localhost:8080

@@ -166,6 +166,7 @@ func (jwkm *JWKManager) initCertStore() {
 }
 
 func main() {
+	log.Println("NEU4")
 	jwkManager := JWKManager{url: "https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json"}
 	jwkManager.initCertStore()
 
