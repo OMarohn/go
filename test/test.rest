@@ -47,3 +47,23 @@ GET http://localhost:8080/coasters/id1
 
 ###
 GET http://localhost:8080
+
+
+####
+GET http://localhost:8080/db/coasters
+
+####
+GET http://localhost:8080/db/coasters/id1
+
+###
+POST http://localhost:8080/db/coasters
+
+{
+  "name": "Coaster 7",
+  "manufacture": "Manufacture 7",
+  "id": "id7",
+  "height": 323
+}
+
+###
+DELETE http://localhost:8080/db/coasters/id7

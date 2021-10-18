@@ -3,6 +3,7 @@ package main
 
 import (
 	"crypto/rsa"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -18,15 +19,18 @@ import (
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 	"kom.com/m/v2/src/kom.com/coaster/coaster"
 )
 
 // Connections
 type Connections struct {
 	RedisClient *redis.Client
+	CoasterDB   *sql.DB
 }
 
-func RedisClient() (*Connections, error) {
+// Erzeugen der Clients fuer die DB und den REDIS
+func ConnectionClient() (*Connections, error) {
 	redisHost := os.Getenv("REDIS_HOST")
 	redisPort := os.Getenv("REDIS_PORT")
 	redisPsw := os.Getenv("REDIS_PSW")
@@ -37,8 +41,23 @@ func RedisClient() (*Connections, error) {
 		DB:       0,
 	})
 
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPsw := os.Getenv("DB_PSW")
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable", dbUser, dbPsw, "coaster", dbHost, dbPort)
+	db, err := sql.Open("postgres", dbinfo)
+
+	if err != nil {
+		panic("Konnte DB nich öffnen!")
+	}
+
+	log.Println(dbinfo)
+	log.Println(db)
+
 	return &Connections{
 		RedisClient: rdb,
+		CoasterDB:   db,
 	}, nil
 }
 
@@ -170,7 +189,8 @@ func main() {
 	jwkManager := JWKManager{url: "https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json"}
 	jwkManager.initCertStore()
 
-	conn, err := RedisClient()
+	conn, err := ConnectionClient()
+	// defer auch noch DB schliessen
 	defer conn.closeRedis()
 
 	if err != nil {
@@ -186,6 +206,10 @@ func main() {
 	port_REST_mem := coaster.NewCoasterRestPort2(
 		coaster.NewCoasterService(
 			coaster.NewCoasterMemmoryRepo()))
+
+	port_REST_db := coaster.NewCoasterRestPort2(
+		coaster.NewCoasterService(
+			coaster.NewPostgresRepo(conn.CoasterDB)))
 
 	// JWT checken
 	jwtMiddlewareRO := jwtmiddleware.New(jwtmiddleware.Options{
@@ -282,6 +306,13 @@ func main() {
 		w.Write(body)
 
 	})
+
+	srdb := r.PathPrefix("/db").Subrouter()
+	srdb.Use(loggingMiddleware)
+	srdb.HandleFunc("/coasters", port_REST_db.HandleList).Methods(http.MethodGet)
+	srdb.HandleFunc("/coasters", port_REST_db.HandleCreate).Methods(http.MethodPost)
+	srdb.HandleFunc("/coasters/{id}", port_REST_db.HandleGetOne).Methods(http.MethodGet)
+	srdb.HandleFunc("/coasters/{id}", port_REST_db.HandleDelete).Methods(http.MethodDelete)
 
 	err = http.ListenAndServe(":8080", r)
 	if err != nil {
