@@ -22,7 +22,7 @@ func NewRedisRepo(redisClient *redis.Client) CoasterRedisRepo {
 // Ermitteln aller Daten hier auf 50 max. gedrosselt. Pageing müsste noch rein
 func (repo CoasterRedisRepo) getCoasters() []Coaster {
 
-	var ret []Coaster
+	var ret []Coaster = make([]Coaster, 0)
 
 	// schlüssel lesen (max. 50)
 	keys, _, err := repo.rclient.Scan(ctx, 0, "coaster*", 50).Result()
@@ -31,25 +31,29 @@ func (repo CoasterRedisRepo) getCoasters() []Coaster {
 		panic(err)
 	}
 
-	// Daten lesen
-	erg, err := repo.rclient.MGet(ctx, keys...).Result()
+	if len(keys) > 0 {
 
-	if err != nil {
-		panic(err)
-	}
+		// Daten lesen
+		erg, err := repo.rclient.MGet(ctx, keys...).Result()
 
-	// Daten aus dem JSON deserialisieren
-	var coasterItem Coaster
-	for _, item := range erg {
-
-		err := json.Unmarshal([]byte(item.(string)), &coasterItem)
 		if err != nil {
 			panic(err)
 		}
 
-		ret = append(ret, coasterItem)
+		// Daten aus dem JSON deserialisieren
+		var coasterItem Coaster
+		for _, item := range erg {
 
+			err := json.Unmarshal([]byte(item.(string)), &coasterItem)
+			if err != nil {
+				panic(err)
+			}
+
+			ret = append(ret, coasterItem)
+
+		}
 	}
+
 	return ret
 }
 
