@@ -21,7 +21,7 @@ func (repo CoasterPostgresRepo) getCoasters() []Coaster {
 	rows, err := repo.db.Query("SELECT id, name, manufacture, height FROM coaster")
 
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 	defer rows.Close()
 
