@@ -1,28 +1,51 @@
 package coaster
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
 )
 
 type CoasterMemmoryRepo struct {
 	store map[string]Coaster
 }
 
+func initFromFile() map[string]Coaster {
+	jsonFile, err := os.Open("./coasters.json")
+
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Successfully Opened coasters.json")
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// we initialize our Users array
+	var coasters []Coaster
+
+	// we unmarshal our byteArray which contains our
+	// jsonFile's content into 'users' which we defined above
+	json.Unmarshal(byteValue, &coasters)
+
+	store := make(map[string]Coaster, len(coasters))
+
+	for i := 0; i < len(coasters); i++ {
+		fmt.Println("ID: " + coasters[i].ID)
+		store[coasters[i].ID] = coasters[i]
+	}
+
+	return store
+
+}
+
 func NewCoasterMemmoryRepo() CoasterMemmoryRepo {
 	return CoasterMemmoryRepo{
-		store: map[string]Coaster{
-			"id1": {
-				Name:        "Coaster 1",
-				Manufacture: "Manufacture 1",
-				ID:          "id1",
-				Height:      100,
-			},
-			"id2": {
-				Name:        "Coaster 2",
-				Manufacture: "Manufacture 2",
-				ID:          "id2",
-				Height:      200,
-			}},
+		store: initFromFile(),
 	}
 }
 

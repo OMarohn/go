@@ -1,0 +1,20 @@
+[
+    {
+        "Name":        "Coaster 1",
+        "Manufacture": "Manufacture 1",
+        "ID":          "id1",
+        "Height":      100
+    },
+    {
+        "Name":        "Coaster 2",
+        "Manufacture": "Manufacture 2",
+        "ID":          "id2",
+        "Height":      200
+    },
+    {
+        "Name":        "Coaster 3",
+        "Manufacture": "Manufacture 3",
+        "ID":          "id3",
+        "Height":      300
+    }          
+]

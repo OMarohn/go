@@ -1,0 +1,24 @@
+## build
+FROM golang:1.16.13-alpine3.15 as build
+
+WORKDIR /app
+
+COPY  . /app
+
+RUN go mod download
+
+RUN go build -o /server ./src/kom.com/server/rest/restGorilla/server_http.go 
+
+
+## deploy -- hier Zielimage möglichst klein und sicher
+FROM alpine:3.15
+
+WORKDIR /
+
+COPY --from=build /server /server
+
+EXPOSE 8080
+
+USER 12345:12345
+
+ENTRYPOINT ["/server"]
