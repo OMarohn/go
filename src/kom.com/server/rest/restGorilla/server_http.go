@@ -19,8 +19,19 @@ import (
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	_ "github.com/lib/pq"
 	"kom.com/m/v2/src/kom.com/coaster/coaster"
+)
+
+var (
+	httpDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "myapp_http_duration_seconds",
+		Help: "Duration of HTTP requests.",
+	}, []string{"path"})
 )
 
 // Connections
@@ -184,6 +195,18 @@ func (jwkm *JWKManager) initCertStore() {
 	log.Println("Anzahl Zerifikate: ", cnt)
 }
 
+// Prometheus Metriken
+// prometheusMiddleware implements mux.MiddlewareFunc.
+func prometheusMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		route := mux.CurrentRoute(r)
+		path, _ := route.GetPathTemplate()
+		timer := prometheus.NewTimer(httpDuration.WithLabelValues(path))
+		next.ServeHTTP(w, r)
+		timer.ObserveDuration()
+	})
+}
+
 func main() {
 	log.Println("NEU4")
 	jwkManager := JWKManager{url: "https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json"}
@@ -269,6 +292,9 @@ func main() {
 	})
 
 	r := mux.NewRouter()
+	r.Use(prometheusMiddleware)
+
+	r.Path("/metrics").Handler(promhttp.Handler())
 
 	r.HandleFunc("/coasters", port_REST_mem.HandleList).Methods(http.MethodGet)
 	r.HandleFunc("/coasters/{id}", port_REST_mem.HandleGetOne).Methods(http.MethodGet)
