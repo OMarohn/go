@@ -29,7 +29,7 @@ import (
 
 var (
 	httpDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "myapp_http_duration_seconds",
+		Name: "gocoaster_http_duration_seconds",
 		Help: "Duration of HTTP requests.",
 	}, []string{"path"})
 )

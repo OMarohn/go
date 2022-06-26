@@ -1,0 +1,1 @@
+Beispieldaten sind unter [kaggle](https://www.kaggle.com/datasets/robikscube/rollercoaster-database?resource=download) zu finden.
