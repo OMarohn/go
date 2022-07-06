@@ -7,7 +7,7 @@ COPY  . /app
 
 RUN go mod download
 
-RUN go build -o /server ./src/kom.com/server/rest/restGorilla/server_http.go 
+RUN go build -o /server ./src/kom.com/server/rest/echo/server_http.go 
 
 
 ## deploy -- hier Zielimage möglichst klein und sicher
