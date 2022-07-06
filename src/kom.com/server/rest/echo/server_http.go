@@ -11,20 +11,13 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	promMW "github.com/labstack/echo-contrib/prometheus"
 
 	_ "github.com/lib/pq"
 	"kom.com/m/v2/src/kom.com/coaster/coaster"
-)
-
-var (
-	httpDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "gocoaster_http_duration_seconds",
-		Help: "Duration of HTTP requests.",
-	}, []string{"path"})
 )
 
 // Connections
@@ -94,18 +87,19 @@ func main() {
 		coaster.NewCoasterService(
 			coaster.NewCoasterMemmoryRepo()))
 
-	// port_REST_db := coaster.NewCoasterRestPort2(
-	// 	coaster.NewCoasterService(
-	// 		coaster.NewPostgresRepo(conn.CoasterDB)))
+	port_REST_db := coaster.NewCoasterRestPort3(
+		coaster.NewCoasterService(
+			coaster.NewPostgresRepo(conn.CoasterDB)))
 
 	/**
 	Ab hier ECHO Server und Middleware
 	*/
 
-	/**
-	Routing
-	*/
 	e := echo.New()
+
+	prom := promMW.NewPrometheus("echo", nil)
+	prom.Use(e)
+	e.Use(middleware.Logger())
 
 	e.GET("/coasters", port_REST_mem.HandleList)
 	e.GET("/coasters/:id", port_REST_mem.HandleGetOne)
@@ -117,6 +111,13 @@ func main() {
 
 	sr.GET("/coasters/:id", port_REST_redis.HandleGetOne)
 	sr.POST("/coasters", port_REST_redis.HandleCreate)
+
+	srd := e.Group("/db")
+	srd.DELETE("/coasters/:id", port_REST_db.HandleDelete)
+	srd.GET("/coasters", port_REST_db.HandleList)
+
+	srd.GET("/coasters/:id", port_REST_db.HandleGetOne)
+	srd.POST("/coasters", port_REST_db.HandleCreate)
 
 	// Start server
 	go func() {
