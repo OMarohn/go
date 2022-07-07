@@ -76,9 +76,15 @@ func (repo CoasterMemmoryRepo) getCoaster(id string) (Coaster, error) {
 		return c, nil
 	}
 
-	return Coaster{}, errors.New("nicht implementiert")
+	return Coaster{}, errors.New("datensatz nicht gefunden")
 }
 
 func (repo CoasterMemmoryRepo) deleteCoaster(id string) error {
-	return errors.New("nicht implementiert")
+	_, ok := repo.store[id]
+	if ok {
+		delete(repo.store, id)
+		return nil
+	}
+
+	return errors.New("datensatz nicht gefunden")
 }

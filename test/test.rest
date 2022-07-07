@@ -5,7 +5,7 @@ GET http://localhost:8080/redis/coasters
 Authorization: Bearer {{token}}
 
 ####
-GET http://localhost:8080/coasters/id578
+GET http://localhost:8080/redis/coasters/id578
 Authorization: Bearer {{token}}
 
 ###
@@ -29,12 +29,17 @@ Authorization: Bearer {{token}}
 
 
 ###
-GET http://localhost:8080/coasters
+GET http://localhost:8080/mem/coasters
 Authorization: Bearer {{token}}
 
 ###
-POST http://localhost:8080/coasters
+GET http://localhost:8080/mem/coasters/id5
 Authorization: Bearer {{token}}
+
+###
+POST http://localhost:8080/mem/coasters
+Authorization: Bearer {{token}}
+Content-Type: application/json
 
 {
   "name": "Coaster 7",
@@ -44,11 +49,12 @@ Authorization: Bearer {{token}}
 }
 
 ###
-GET http://localhost:8080/coasters/id852
+GET http://localhost:8080/mem/coasters/id852
 Authorization: Bearer {{token}}
 
 ###
-GET http://localhost:8080
+DELETE http://localhost:8080/mem/coasters/id5
+Authorization: Bearer {{token}}
 
 
 ####
@@ -69,3 +75,7 @@ POST http://localhost:8080/db/coasters
 
 ###
 DELETE http://localhost:8080/db/coasters/id7
+
+
+### Metrics
+GET http://localhost:8080/metrics

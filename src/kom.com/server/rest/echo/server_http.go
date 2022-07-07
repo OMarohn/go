@@ -3,12 +3,17 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
+
+	jwtft "github.com/form3tech-oss/jwt-go"
+	"github.com/golang-jwt/jwt"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -18,6 +23,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"kom.com/m/v2/src/kom.com/coaster/coaster"
+	jwkstools "kom.com/m/v2/src/kom.com/server/jwks"
 )
 
 // Connections
@@ -66,6 +72,29 @@ func (d *Connections) closeRedis() error {
 	return nil
 }
 
+func authmw() echo.MiddlewareFunc {
+	jwkManager := jwkstools.JWKManager{Url: "https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json", Filename: "/app/jwks.json"}
+	jwkManager.InitCertStore()
+
+	// initialize JWT middleware instance
+	return middleware.JWTWithConfig(middleware.JWTConfig{
+		// skip public endpoints
+		Skipper: func(context echo.Context) bool {
+			return strings.Contains(context.Path(), "/metrics")
+		},
+		KeyFunc: func(token *jwt.Token) (interface{}, error) {
+			// casting the hard way @todo castin the easy way lernen ;-)
+			t := jwtft.Token{Raw: token.Raw, Method: token.Method, Header: token.Header, Claims: token.Claims, Signature: token.Signature, Valid: token.Valid}
+
+			pk, err := jwkManager.GetPemCert(&t)
+			if err != nil {
+				return nil, errors.New("token invalid")
+			}
+			return pk, err
+		},
+	})
+}
+
 func main() {
 	log.Println("Echo Server")
 
@@ -94,30 +123,30 @@ func main() {
 	/**
 	Ab hier ECHO Server und Middleware
 	*/
-
 	e := echo.New()
 
 	prom := promMW.NewPrometheus("echo", nil)
 	prom.Use(e)
 	e.Use(middleware.Logger())
+	jwksMW := authmw()
 
-	e.GET("/coasters", port_REST_mem.HandleList)
-	e.GET("/coasters/:id", port_REST_mem.HandleGetOne)
-	e.POST("/coasters", port_REST_mem.HandleCreate)
+	sm := e.Group("/mem", jwksMW)
+	sm.GET("/coasters", port_REST_mem.HandleList)
+	sm.GET("/coasters/:id", port_REST_mem.HandleGetOne)
+	sm.POST("/coasters", port_REST_mem.HandleCreate)
+	sm.DELETE("/coasters/:id", port_REST_mem.HandleDelete)
 
 	sr := e.Group("/redis")
-	sr.DELETE("/coasters/:id", port_REST_redis.HandleDelete)
 	sr.GET("/coasters", port_REST_redis.HandleList)
-
 	sr.GET("/coasters/:id", port_REST_redis.HandleGetOne)
 	sr.POST("/coasters", port_REST_redis.HandleCreate)
+	sr.DELETE("/coasters/:id", port_REST_redis.HandleDelete)
 
 	srd := e.Group("/db")
-	srd.DELETE("/coasters/:id", port_REST_db.HandleDelete)
 	srd.GET("/coasters", port_REST_db.HandleList)
-
 	srd.GET("/coasters/:id", port_REST_db.HandleGetOne)
 	srd.POST("/coasters", port_REST_db.HandleCreate)
+	srd.DELETE("/coasters/:id", port_REST_db.HandleDelete)
 
 	// Start server
 	go func() {

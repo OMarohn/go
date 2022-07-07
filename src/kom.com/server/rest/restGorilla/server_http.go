@@ -2,7 +2,6 @@
 package main
 
 import (
-	"crypto/rsa"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -12,8 +11,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"encoding/json"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware"
 	"github.com/form3tech-oss/jwt-go"
@@ -25,6 +22,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"kom.com/m/v2/src/kom.com/coaster/coaster"
+	jwkst "kom.com/m/v2/src/kom.com/server/jwks"
 )
 
 var (
@@ -89,20 +87,6 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 /// JWT Stuff
-
-// Struktur des JWKS
-type Jwks struct {
-	Keys []JSONWebKeys `json:"keys"`
-}
-type JSONWebKeys struct {
-	Kty string   `json:"kty"`
-	Kid string   `json:"kid"`
-	Use string   `json:"use"`
-	N   string   `json:"n"`
-	E   string   `json:"e"`
-	X5c []string `json:"x5c"`
-}
-
 func checkScope(claims jwt.MapClaims, scope string) bool {
 	ret := false
 
@@ -119,82 +103,6 @@ func checkScope(claims jwt.MapClaims, scope string) bool {
 	return ret
 }
 
-type JWKManager struct {
-	url       string
-	certStore map[string]*rsa.PublicKey
-}
-
-// JWKS Ergbniss in eine Map id|rsaPublic Key wandeln
-func (jwkm *JWKManager) mapJwks2Store(items Jwks) (int, error) {
-	jwkm.certStore = make(map[string]*rsa.PublicKey)
-	for k, _ := range items.Keys {
-		cert := "-----BEGIN CERTIFICATE-----\n" + items.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
-		pubKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(cert))
-		if err != nil {
-			log.Println("Public Key nicht gefunden")
-		}
-		jwkm.certStore[items.Keys[k].Kid] = pubKey
-	}
-
-	return len(jwkm.certStore), nil
-}
-
-// Remote lesen des JWKS
-func (jwkm *JWKManager) getJWKS(url string) (int, error) {
-	resp, err := http.Get(url)
-
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	var jwks = Jwks{}
-	err = json.NewDecoder(resp.Body).Decode(&jwks)
-
-	if err != nil {
-		return 0, err
-	}
-
-	return jwkm.mapJwks2Store(jwks)
-}
-
-// Public Key ermitteln
-func (jwkm *JWKManager) getPemCert(token *jwt.Token) (*rsa.PublicKey, error) {
-
-	kid := fmt.Sprintf("%v", token.Header["kid"])
-	pk, found := jwkm.certStore[kid]
-	if !found {
-		err := errors.New("konnte key für das zertifikat nicht finden")
-		return nil, err
-	}
-
-	return pk, nil
-}
-
-func (jwkm *JWKManager) initCertStore() {
-	cnt, err := jwkm.getJWKS(jwkm.url)
-	if err != nil {
-		log.Println("Keine Zerifikate im Store gefunden!", err)
-		// Datei mit JWKS lesen
-		jsonFile, err := os.Open("./jwks.json")
-
-		if err != nil {
-			panic("Auch keine JWKS-Datei gefunden!")
-		} else {
-			defer jsonFile.Close()
-			log.Println("File OK")
-			var jwks = Jwks{}
-			err = json.NewDecoder(jsonFile).Decode(&jwks)
-			if err != nil {
-				panic(err)
-			} else {
-				cnt, _ = jwkm.mapJwks2Store(jwks)
-			}
-		}
-	}
-	log.Println("Anzahl Zerifikate: ", cnt)
-}
-
 // Prometheus Metriken
 // prometheusMiddleware implements mux.MiddlewareFunc.
 func prometheusMiddleware(next http.Handler) http.Handler {
@@ -209,8 +117,8 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 
 func main() {
 	log.Println("NEU4")
-	jwkManager := JWKManager{url: "https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json"}
-	jwkManager.initCertStore()
+	jwkManager := jwkst.JWKManager{Url: "https://dev-vdt9zz3q.us.auth0.com/.well-known/jwks.json", Filename: "/app/jwks.json"}
+	jwkManager.InitCertStore()
 
 	conn, err := ConnectionClient()
 	// defer auch noch DB schliessen
@@ -253,7 +161,7 @@ func main() {
 			}
 
 			// das mit dem CertStore ist noch ein wenig unschön!
-			pk, err := jwkManager.getPemCert(token)
+			pk, err := jwkManager.GetPemCert(token)
 			if err != nil {
 				return nil, errors.New("token invalid")
 			}
@@ -281,7 +189,7 @@ func main() {
 			}
 
 			// das mit dem CertStore ist noch ein wenig unschön!
-			pk, err := jwkManager.getPemCert(token)
+			pk, err := jwkManager.GetPemCert(token)
 			if err != nil {
 				return nil, errors.New("token invalid")
 			}
