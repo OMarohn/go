@@ -63,6 +63,9 @@ func (repo CoasterMemmoryRepo) getCoasters() []Coaster {
 }
 
 func (repo CoasterMemmoryRepo) createCoaster(coaster Coaster) error {
+	if len(coaster.ID) == 0 {
+		return errors.New("id fehlt")
+	}
 	if (repo.store[coaster.ID] != Coaster{}) {
 		return errors.New("datensatz bereits existent")
 	}
