@@ -35,7 +35,7 @@ func (port CoasterRestPort3) HandleCreate(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	c.JSON(http.StatusOK, cItem)
+	c.JSON(http.StatusCreated, cItem)
 	return nil
 }
 

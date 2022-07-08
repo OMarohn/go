@@ -95,8 +95,7 @@ func authmw() echo.MiddlewareFunc {
 	})
 }
 
-func main() {
-	log.Println("Echo Server")
+func CreateEchoServer() *echo.Echo {
 
 	conn, err := ConnectionClient()
 	// defer auch noch DB schliessen
@@ -130,13 +129,13 @@ func main() {
 	e.Use(middleware.Logger())
 	jwksMW := authmw()
 
-	sm := e.Group("/mem", jwksMW)
+	sm := e.Group("/mem")
 	sm.GET("/coasters", port_REST_mem.HandleList)
 	sm.GET("/coasters/:id", port_REST_mem.HandleGetOne)
 	sm.POST("/coasters", port_REST_mem.HandleCreate)
 	sm.DELETE("/coasters/:id", port_REST_mem.HandleDelete)
 
-	sr := e.Group("/redis")
+	sr := e.Group("/redis", jwksMW)
 	sr.GET("/coasters", port_REST_redis.HandleList)
 	sr.GET("/coasters/:id", port_REST_redis.HandleGetOne)
 	sr.POST("/coasters", port_REST_redis.HandleCreate)
@@ -147,6 +146,14 @@ func main() {
 	srd.GET("/coasters/:id", port_REST_db.HandleGetOne)
 	srd.POST("/coasters", port_REST_db.HandleCreate)
 	srd.DELETE("/coasters/:id", port_REST_db.HandleDelete)
+
+	return e
+
+}
+
+func main() {
+
+	e := CreateEchoServer()
 
 	// Start server
 	go func() {
