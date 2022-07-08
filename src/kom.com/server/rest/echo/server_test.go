@@ -26,7 +26,7 @@ func TestCoasterEchoServer(t *testing.T) {
 	require.NotNil(server)
 
 	go func() {
-		if err := server.Start(":8080"); err != nil && err != http.ErrServerClosed {
+		if err := server.Start("localhost:8080"); err != nil && err != http.ErrServerClosed {
 			server.Logger.Fatal("shutting down the server")
 		}
 	}()
