@@ -27,10 +27,22 @@ func TestCoasterService(t *testing.T) {
 		assert.NoError(err)
 	})
 
+	t.Run("Anlegen eines vorhandenen  Coasters", func(t *testing.T) {
+		err := coasterService.createCoaster(testCoaster)
+		assert.Error(err)
+		assert.EqualError(err, "datensatz bereits existent")
+	})
+
 	t.Run("Lesen des angelegten Coasters", func(t *testing.T) {
 		c, err := coasterService.getCoaster("id123")
 		assert.NoError(err)
 		assert.Equal(c, testCoaster)
+	})
+
+	t.Run("Lesen eines unbekannten Coasters", func(t *testing.T) {
+		_, err := coasterService.getCoaster("id99999")
+		assert.Error(err)
+		assert.EqualError(err, "datensatz nicht gefunden")
 	})
 
 	t.Run("Löschen eines unbekannten Coasters", func(t *testing.T) {

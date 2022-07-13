@@ -60,6 +60,17 @@ func TestCoasterEchoServer(t *testing.T) {
 		require.Equal(http.StatusCreated, res.StatusCode)
 	})
 
+	t.Run("anlegen eines vorhandenen mem coasters", func(t *testing.T) {
+		payloadBuf := new(bytes.Buffer)
+		err := json.NewEncoder(payloadBuf).Encode(testCoaster)
+		require.NoError(err)
+
+		res, err := http.Post("http://localhost:8080/mem/coasters", "application/json", payloadBuf)
+		require.NoError(err)
+		assert.NotNil(res)
+		require.Equal(http.StatusBadRequest, res.StatusCode)
+	})
+
 	t.Run("lesen mem coasters", func(t *testing.T) {
 		res, err := http.Get("http://localhost:8080/mem/coasters")
 		require.NoError(err)
