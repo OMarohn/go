@@ -2,28 +2,24 @@
 #
 # https://gqlgen.com/getting-started/
 
-type Todo {
-  id: ID!
-  text: String!
-  done: Boolean!
-  user: User!
-}
-
-type User {
-  id: ID!
-  name: String!
-}
 
 type Query {
-  todos: [Todo!]!
+  coasters: [Coaster!]!
 }
 
-input NewTodo {
-  text: String!
-  userId: String!
+type Coaster {
+	id: ID!
+	name: String!
+	manufacture: String
+	height: Int
+}
+
+input NewCoaster {
+	name: String!
+	manufacture: String
+	height: Int
 }
 
 type Mutation {
-  createTodo(input: NewTodo!): Todo!
-  closeTodo(id: ID!): Todo!
+  createCoaster(input: NewCoaster!): Coaster!
 }

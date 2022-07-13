@@ -23,13 +23,11 @@ import (
 
 	_ "github.com/lib/pq"
 	"kom.com/m/v2/src/kom.com/coaster/coaster"
+	"kom.com/m/v2/src/kom.com/graph/generated"
 	jwkstools "kom.com/m/v2/src/kom.com/server/jwks"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
-
-	"kom.com/m/v2/src/kom.com/graph"
-	"kom.com/m/v2/src/kom.com/graph/generated"
 )
 
 // Connections
@@ -116,10 +114,11 @@ func CreateEchoServer() *echo.Echo {
 		coaster.NewCoasterService(
 			coaster.NewRedisRepo(conn.RedisClient)))
 
+	// Service der auf dem Arbeitsspeicher arbeitet - soll auch für den GQL-Port Verwendet werden.
+	memService := coaster.NewCoasterService(
+		coaster.NewCoasterMemmoryRepo())
 	// Daten aus dem Speicher
-	port_REST_mem := coaster.NewCoasterRestPort3(
-		coaster.NewCoasterService(
-			coaster.NewCoasterMemmoryRepo()))
+	port_REST_mem := coaster.NewCoasterRestPort3(memService)
 
 	port_REST_db := coaster.NewCoasterRestPort3(
 		coaster.NewCoasterService(
@@ -136,7 +135,8 @@ func CreateEchoServer() *echo.Echo {
 	jwksMW := authmw()
 
 	// gql
-	gQLSrv := echo.WrapHandler(handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}})))
+	resolver := coaster.NewCoasterResolver(&memService)
+	gQLSrv := echo.WrapHandler(handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &resolver})))
 	gQLPlayGroundHandler := echo.WrapHandler(playground.Handler("GraphQL playground", "/query"))
 	e.GET("/playground", gQLPlayGroundHandler)
 	e.POST("/query", gQLSrv)
