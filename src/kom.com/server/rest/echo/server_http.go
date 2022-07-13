@@ -24,6 +24,12 @@ import (
 	_ "github.com/lib/pq"
 	"kom.com/m/v2/src/kom.com/coaster/coaster"
 	jwkstools "kom.com/m/v2/src/kom.com/server/jwks"
+
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
+
+	"kom.com/m/v2/src/kom.com/graph"
+	"kom.com/m/v2/src/kom.com/graph/generated"
 )
 
 // Connections
@@ -129,6 +135,13 @@ func CreateEchoServer() *echo.Echo {
 	e.Use(middleware.Logger())
 	jwksMW := authmw()
 
+	// gql
+	gQLSrv := echo.WrapHandler(handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}})))
+	gQLPlayGroundHandler := echo.WrapHandler(playground.Handler("GraphQL playground", "/query"))
+	e.GET("/playground", gQLPlayGroundHandler)
+	e.POST("/query", gQLSrv)
+
+	// REST
 	sm := e.Group("/mem")
 	sm.GET("/coasters", port_REST_mem.HandleList)
 	sm.GET("/coasters/:id", port_REST_mem.HandleGetOne)
