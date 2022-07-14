@@ -29,6 +29,15 @@ func (r *mutationResolver) CreateCoaster(ctx context.Context, input model.NewCoa
 	return &model.Coaster{ID: newCoaster.ID, Name: newCoaster.Name, Manufacture: &newCoaster.Manufacture, Height: &newCoaster.Height}, nil
 }
 
+// DeleteCoaster is the resolver for the deleteCoaster field.
+func (r *mutationResolver) DeleteCoaster(ctx context.Context, id *string) (*model.Coaster, error) {
+	err := r.service.deleteCoaster(*id)
+	if err != nil {
+		return nil, err
+	}
+	return &model.Coaster{ID: *id}, nil
+}
+
 // Coasters is the resolver for the coasters field.
 func (r *queryResolver) Coasters(ctx context.Context) ([]*model.Coaster, error) {
 	allCoaster := r.service.getCoasters()
@@ -39,6 +48,16 @@ func (r *queryResolver) Coasters(ctx context.Context) ([]*model.Coaster, error) 
 		ret[i] = &model.Coaster{ID: c.ID, Name: c.Name, Manufacture: &m, Height: &h}
 	}
 	return ret, nil
+}
+
+// CoasterByID is the resolver for the coasterById field.
+func (r *queryResolver) CoasterByID(ctx context.Context, id *string) (*model.Coaster, error) {
+	theCoaster, err := r.service.getCoaster(*id)
+	if err != nil {
+		return &model.Coaster{ID: *id}, err
+	}
+	mc := &model.Coaster{ID: theCoaster.ID, Name: theCoaster.Name, Manufacture: &theCoaster.Manufacture, Height: &theCoaster.Height}
+	return mc, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

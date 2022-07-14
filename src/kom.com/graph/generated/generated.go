@@ -53,18 +53,22 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		CreateCoaster func(childComplexity int, input model.NewCoaster) int
+		DeleteCoaster func(childComplexity int, id *string) int
 	}
 
 	Query struct {
-		Coasters func(childComplexity int) int
+		CoasterByID func(childComplexity int, id *string) int
+		Coasters    func(childComplexity int) int
 	}
 }
 
 type MutationResolver interface {
 	CreateCoaster(ctx context.Context, input model.NewCoaster) (*model.Coaster, error)
+	DeleteCoaster(ctx context.Context, id *string) (*model.Coaster, error)
 }
 type QueryResolver interface {
 	Coasters(ctx context.Context) ([]*model.Coaster, error)
+	CoasterByID(ctx context.Context, id *string) (*model.Coaster, error)
 }
 
 type executableSchema struct {
@@ -121,6 +125,30 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreateCoaster(childComplexity, args["input"].(model.NewCoaster)), true
+
+	case "Mutation.deleteCoaster":
+		if e.complexity.Mutation.DeleteCoaster == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteCoaster_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteCoaster(childComplexity, args["id"].(*string)), true
+
+	case "Query.coasterById":
+		if e.complexity.Query.CoasterByID == nil {
+			break
+		}
+
+		args, err := ec.field_Query_coasterById_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.CoasterByID(childComplexity, args["id"].(*string)), true
 
 	case "Query.coasters":
 		if e.complexity.Query.Coasters == nil {
@@ -204,7 +232,8 @@ var sources = []*ast.Source{
 
 
 type Query {
-  coasters: [Coaster!]!
+  coasters : [Coaster!]!
+  coasterById(id:ID) : Coaster!
 }
 
 type Coaster {
@@ -222,6 +251,7 @@ input NewCoaster {
 
 type Mutation {
   createCoaster(input: NewCoaster!): Coaster!
+  deleteCoaster(id: ID) : Coaster!
 }
 `, BuiltIn: false},
 }
@@ -246,6 +276,21 @@ func (ec *executionContext) field_Mutation_createCoaster_args(ctx context.Contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_deleteCoaster_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -258,6 +303,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_coasterById_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -534,6 +594,71 @@ func (ec *executionContext) fieldContext_Mutation_createCoaster(ctx context.Cont
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_deleteCoaster(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteCoaster(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteCoaster(rctx, fc.Args["id"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Coaster)
+	fc.Result = res
+	return ec.marshalNCoaster2ᚖkomᚗcomᚋmᚋv2ᚋsrcᚋkomᚗcomᚋgraphᚋmodelᚐCoaster(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteCoaster(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Coaster_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Coaster_name(ctx, field)
+			case "manufacture":
+				return ec.fieldContext_Coaster_manufacture(ctx, field)
+			case "height":
+				return ec.fieldContext_Coaster_height(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Coaster", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteCoaster_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_coasters(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_coasters(ctx, field)
 	if err != nil {
@@ -584,6 +709,71 @@ func (ec *executionContext) fieldContext_Query_coasters(ctx context.Context, fie
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Coaster", field.Name)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_coasterById(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_coasterById(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().CoasterByID(rctx, fc.Args["id"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Coaster)
+	fc.Result = res
+	return ec.marshalNCoaster2ᚖkomᚗcomᚋmᚋv2ᚋsrcᚋkomᚗcomᚋgraphᚋmodelᚐCoaster(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_coasterById(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Coaster_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Coaster_name(ctx, field)
+			case "manufacture":
+				return ec.fieldContext_Coaster_manufacture(ctx, field)
+			case "height":
+				return ec.fieldContext_Coaster_height(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Coaster", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_coasterById_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }
@@ -2613,6 +2803,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "deleteCoaster":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteCoaster(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2653,6 +2852,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_coasters(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "coasterById":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_coasterById(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -3391,6 +3613,22 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	res := graphql.MarshalBoolean(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalID(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalID(*v)
 	return res
 }
 

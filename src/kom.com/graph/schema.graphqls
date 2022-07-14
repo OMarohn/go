@@ -4,7 +4,8 @@
 
 
 type Query {
-  coasters: [Coaster!]!
+  coasters : [Coaster!]!
+  coasterById(id:ID) : Coaster!
 }
 
 type Coaster {
@@ -22,4 +23,5 @@ input NewCoaster {
 
 type Mutation {
   createCoaster(input: NewCoaster!): Coaster!
+  deleteCoaster(id: ID) : Coaster!
 }
