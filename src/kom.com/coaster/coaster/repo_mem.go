@@ -13,7 +13,7 @@ type CoasterMemmoryRepo struct {
 }
 
 func initFromFile() map[string]Coaster {
-	jsonFile, err := os.Open("./coasters.json")
+	jsonFile, err := os.Open("/app/coasters.json")
 
 	if err != nil {
 		fmt.Println(err)

@@ -5,3 +5,4 @@ pkg
 test.rest
 __debug_bin.exe
 data/coaster_db.csv
+data/coasters.json
