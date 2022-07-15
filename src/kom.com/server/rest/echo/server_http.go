@@ -99,6 +99,14 @@ func authmw() echo.MiddlewareFunc {
 	})
 }
 
+func healthHandler(ctx echo.Context) error {
+	return ctx.String(http.StatusOK, "OK")
+}
+
+func readyHandler(ctx echo.Context) error {
+	return ctx.String(http.StatusOK, "OK")
+}
+
 func CreateEchoServer() *echo.Echo {
 
 	conn, err := ConnectionClient()
@@ -159,6 +167,9 @@ func CreateEchoServer() *echo.Echo {
 	srd.GET("/coasters/:id", port_REST_db.HandleGetOne)
 	srd.POST("/coasters", port_REST_db.HandleCreate)
 	srd.DELETE("/coasters/:id", port_REST_db.HandleDelete)
+
+	e.GET("/healthz", healthHandler)
+	e.GET("/readyz", readyHandler)
 
 	return e
 
