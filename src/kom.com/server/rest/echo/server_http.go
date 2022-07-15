@@ -30,6 +30,14 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 )
 
+// Versionsinfo - kann beim build -ldflags übergeben werden!
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+	builtBy = "unknown"
+)
+
 // Connections
 type Connections struct {
 	RedisClient *redis.Client
@@ -185,6 +193,8 @@ func main() {
 			e.Logger.Fatal("shutting down the server")
 		}
 	}()
+
+	fmt.Printf("GoCoaster: %s, commit %s, built at %s by %s", version, commit, date, builtBy)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)

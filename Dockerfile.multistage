@@ -1,5 +1,6 @@
 ## build
 FROM golang:1.18-alpine3.16 as build
+ARG ldflags
 
 WORKDIR /app
 
@@ -7,7 +8,7 @@ COPY  . /app
 
 RUN go mod download
 
-RUN go build -o /server ./src/kom.com/server/rest/echo/server_http.go 
+RUN go build -ldflags "${ldflags}" -o /server ./src/kom.com/server/rest/echo/server_http.go 
 
 
 ## deploy -- hier Zielimage möglichst klein und sicher
