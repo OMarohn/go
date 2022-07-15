@@ -49,12 +49,17 @@ func ConnectionClient() (*Connections, error) {
 	redisHost := os.Getenv("REDIS_HOST")
 	redisPort := os.Getenv("REDIS_PORT")
 	redisPsw := os.Getenv("REDIS_PSW")
+	redisinfo := fmt.Sprintf("host=%s port=%s", redisHost, redisPort)
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
 		Password: redisPsw,
 		DB:       0,
 	})
+
+	fmt.Println(rdb.Ping(context.Background()).Result())
+
+	log.Println(redisinfo)
 
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
@@ -119,7 +124,7 @@ func CreateEchoServer() *echo.Echo {
 
 	conn, err := ConnectionClient()
 	// defer auch noch DB schliessen
-	defer conn.closeRedis()
+	// defer conn.closeRedis() # ARGH!!!!
 
 	if err != nil {
 		panic(err)

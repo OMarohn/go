@@ -1,3 +1,5 @@
+### Bei Zeiten mal ausprobieren: https://goreleaser.com/quick-start/
+
 PROJECT?=kom.com/m/v2/server_http
 APP?=src/kom.com/server/rest/echo/server_http.go
 APPBIN?=server_http

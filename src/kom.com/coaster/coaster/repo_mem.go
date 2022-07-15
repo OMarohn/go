@@ -35,12 +35,10 @@ func initFromFile() map[string]Coaster {
 	store := make(map[string]Coaster, len(coasters))
 
 	for i := 0; i < len(coasters); i++ {
-		fmt.Println("ID: " + coasters[i].ID)
 		store[coasters[i].ID] = coasters[i]
 	}
 
 	return store
-
 }
 
 func NewCoasterMemmoryRepo() CoasterMemmoryRepo {
