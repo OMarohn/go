@@ -7,7 +7,7 @@ build:
 	go build -o bin/${APPBIN} ${APP}
 
 run: build
-	PORT=${PORT} ./bin/${APP}
+	PORT=${PORT} ./bin/${APPBIN}
 
 runtest:
 	go test -v -race ./...
