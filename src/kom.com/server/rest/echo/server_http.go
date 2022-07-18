@@ -194,7 +194,7 @@ func main() {
 
 	// Start server
 	go func() {
-		if err := e.Start("127.0.0.1:8080"); err != nil && err != http.ErrServerClosed {
+		if err := e.Start(":8080"); err != nil && err != http.ErrServerClosed {
 			e.Logger.Fatal("shutting down the server")
 		}
 	}()
