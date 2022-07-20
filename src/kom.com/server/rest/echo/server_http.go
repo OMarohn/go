@@ -141,6 +141,7 @@ func CreateEchoServer() *echo.Echo {
 	// Daten aus dem Speicher
 	port_REST_mem := coaster.NewCoasterRestPort3(memService)
 
+	// Daten aus DB
 	port_REST_db := coaster.NewCoasterRestPort3(
 		coaster.NewCoasterService(
 			coaster.NewPostgresRepo(conn.CoasterDB)))
