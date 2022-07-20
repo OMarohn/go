@@ -48,6 +48,16 @@ kubectl apply -f <https://raw.githubusercontent.com/istio/istio/release-1.14/sam
 kubectl apply -f <https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/kiali.yaml>
 ```
 
+## ISTIO im Namespace aktivieren
+
+Damit ISTIO in einem NS aktiv wird, muss der NS mit einem Label versehen werden und die Pods müssen durchgestartet werden. 
+
+```bash
+kubectl label namespace gocoaster istio-injection=enabled --overwrite
+```
+
+Danach die Pods neu starten, damit ISTIO die Sidecar-Container automatisch instatiert.
+
 ## Konfiguration des Externen AuthZ Providers
 
 Der AuthZ Provider kann eine REST und/oder ein GRPC - Schnittstelle haben. In der ISTIO Doku ist ein [Beispielprovider](https://github.com/istio/istio/blob/master/samples/extauthz/cmd/extauthz/main.go) in golang implementiert der beide Schnittstellen exemplarisch implementiert. Diesen habe ich in der REST-Implementierung leicht angepasst um das Austauschen einen Tokens zu simulieren. Den Rest der Implementierung habe ich nicht geändert, da er auch noch andere Aspekte wie das Auswerten von Headern adressiert.
