@@ -1,5 +1,5 @@
 FROM golang:1.18-alpine3.16
-	# checkov:skip=CKV_DOCKER_2: ADD REASON
+# checkov:skip=CKV_DOCKER_2 
 
 WORKDIR /app
 

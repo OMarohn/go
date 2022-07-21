@@ -22,6 +22,7 @@ resolver:
   layout: follow-schema
   dir: src/kom.com/coaster/coaster
   package: coaster
+  filename: src/kom.com/coaster/coaster/port_gql.go
 
 # Optional: turn on use ` + "`" + `gqlgen:"fieldName"` + "`" + ` tags in your models
 # struct_tag: json
